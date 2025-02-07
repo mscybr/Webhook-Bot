@@ -9,7 +9,8 @@ import TelegramBot from 'node-telegram-bot-api';
 let chat_ids = {};
 
 // Replace with your bot's token
-const token = '8087307960:AAGX410IHQAITvmmbEbXa-EjnUxIdi72F-I';
+const token = '7645960989:AAGRJvuVP7e1g8LbXLFiWhcx0nVsZcDl1Rc';
+// const token = '8087307960:AAGX410IHQAITvmmbEbXa-EjnUxIdi72F-I';
 // const token = '8151038148:AAF6GGH1lp8XhjkyrmaKApo6cRdzTA5lDLo';
 
 // Create a bot instance
