@@ -50,7 +50,7 @@ fs.readFile("./total_chats.json", {encoding: 'utf-8'}, function(err,data){
 puppeteerExtra.use(Stealth());
 
 // Launch the browser and open a new blank page
-const browser = await puppeteerExtra.launch({headless:false});
+const browser = await puppeteerExtra.launch({headless:true});
 // first bot
 scrapeSite("https://resell.webook.com/ar");
 
