@@ -7,6 +7,7 @@ import child_process from 'child_process';
 import fs from "node:fs";
 import TelegramBot from 'node-telegram-bot-api';
 let chat_ids = {};
+let tickets_data = {};
 
 // Replace with your bot's token
 const token = '7645960989:AAGRJvuVP7e1g8LbXLFiWhcx0nVsZcDl1Rc';
@@ -50,7 +51,7 @@ fs.readFile("./total_chats.json", {encoding: 'utf-8'}, function(err,data){
 puppeteerExtra.use(Stealth());
 
 // Launch the browser and open a new blank page
-const browser = await puppeteerExtra.launch({headless:true});
+const browser = await puppeteerExtra.launch({headless:false});
 // first bot
 scrapeSite("https://resell.webook.com/ar");
 
@@ -134,11 +135,13 @@ async function scrapeSite(url) {
                 setTimeout(()=>{ bot.sendMessage(chatId, `${dt.title}\n${dt.link}\n${dt.starting_price}\n ${dt.date}`)}, 5000)
               });
             }
+            search_page_for_new_tickets(dt.link);
           }
     });
     if(refresh_data){
       fs.writeFile( "./total_data.json", JSON.stringify( total_data ), "utf8", ()=>{} );
     }
+    await search_every_page(data);
     await delay(7000);
     await page.reload({ waitUntil: ["networkidle0", "domcontentloaded"], timeout:60000 * 60 * 5 });
     return loop(url);
@@ -169,6 +172,50 @@ async function captcha_solver(){
       }else{
         return ;
       }
+
+}
+
+async function search_page_for_new_tickets( link ){
+  let page = await browser.newPage();
+  await page.setUserAgent(
+     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+   );
+  await page.goto(link, {timeout: 60000 * 60, waitUntil: ["networkidle0", "domcontentloaded"]});
+  await page.setViewport({width: 1080, height: 1024});
+  //tickets_data
+  let ticket_ids = await page.evaluate(() => {
+    dt = Array.prototype.map.call(document.querySelectorAll("#main > section > div > div > div.overflow-hidden > div > div > ul > li"), (x)=>x.getAttribute("id"));
+    return dt;
+  });
+  let notify = false;
+  if(tickets_data[link] == null){
+    notify = true;
+    tickets_data[link] = ticket_ids;
+  }else{
+    ticket_ids.forEach((id)=>{
+        let exists = false;
+        tickets_data[link].forEach((_id)=>{
+          if(_id == id) exists = true;
+        })
+        if(exists == false){
+          tickets_data[link].push(id);
+          notify = true;
+        }
+    })
+  }
+
+  if(notify){
+     for (const chatId in chat_ids) {
+              bot.sendMessage(chatId, `تم اضافة تذاكر جديدة على الرابط الاتي: ${link}`)
+              .then(() => {
+                  // console.log('Message sent successfully');
+              })
+              .catch((error) => {
+                // setTimeout(()=>{ bot.sendMessage(chatId, `${dt.title}\n${dt.link}\n${dt.starting_price}\n ${dt.date}`)}, 5000)
+              });
+            }
+  }
+  
 
 }
 
