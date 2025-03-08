@@ -8,6 +8,11 @@ import fs from "node:fs";
 import TelegramBot from 'node-telegram-bot-api';
 let chat_ids = {};
 let tickets_data = {};
+let credentials = {
+  email: "MarcusLamb@outlook.sa",
+  password: "Aa1234999"
+};
+let login_url = "https://resell.webook.com/en/login"
 
 // Replace with your bot's token
 const token = '7645960989:AAGRJvuVP7e1g8LbXLFiWhcx0nVsZcDl1Rc';
@@ -51,7 +56,7 @@ fs.readFile("./total_chats.json", {encoding: 'utf-8'}, function(err,data){
 puppeteerExtra.use(Stealth());
 
 // Launch the browser and open a new blank page
-const browser = await puppeteerExtra.launch({headless:false});
+const browser = await puppeteerExtra.launch({headless:true});
 // first bot
 scrapeSite("https://resell.webook.com/ar");
 
@@ -76,9 +81,19 @@ async function scrapeSite(url) {
   await page.setUserAgent(
      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
    );
+  await login();
   await page.goto(url, {timeout: 60000 * 60, waitUntil: ["networkidle0", "domcontentloaded"]});
   await page.setViewport({width: 1080, height: 1024});
   await loop(url);
+
+  async function login(){
+    await page.goto(login_url, {timeout: 60000 * 60, waitUntil: ["networkidle0", "domcontentloaded"]});
+    await page.setViewport({width: 1080, height: 1024});
+    await page.locator('input[type=email]').fill(credentials.email);
+    await page.locator('input[type=password]').fill(credentials.password);
+    await page.keyboard.press('Enter');
+    return await delay(7000);
+  }
 
   async function loop(url){
 
@@ -141,7 +156,6 @@ async function scrapeSite(url) {
     if(refresh_data){
       fs.writeFile( "./total_data.json", JSON.stringify( total_data ), "utf8", ()=>{} );
     }
-    await search_every_page(data);
     await delay(7000);
     await page.reload({ waitUntil: ["networkidle0", "domcontentloaded"], timeout:60000 * 60 * 5 });
     return loop(url);
