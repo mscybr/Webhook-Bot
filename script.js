@@ -13,7 +13,7 @@ let credentials = {
   password: "Aa1234999"
 };
 let login_url = "https://resell.webook.com/en/login"
-
+let currently_open_pages = {};
 // Replace with your bot's token
 const token = '7645960989:AAGRJvuVP7e1g8LbXLFiWhcx0nVsZcDl1Rc';
 // const token = '8087307960:AAGX410IHQAITvmmbEbXa-EjnUxIdi72F-I';
@@ -117,6 +117,8 @@ async function scrapeSite(url) {
   }
     
 
+
+
       let data = await page.evaluate(() => {
         let items = document.querySelectorAll("#main > section.container > div > a");
         let dt = [];
@@ -150,8 +152,8 @@ async function scrapeSite(url) {
                 setTimeout(()=>{ bot.sendMessage(chatId, `${dt.title}\n${dt.link}\n${dt.starting_price}\n ${dt.date}`)}, 5000)
               });
             }
-            search_page_for_new_tickets(dt.link);
           }
+          search_page_for_new_tickets(dt.link);
     });
     if(refresh_data){
       fs.writeFile( "./total_data.json", JSON.stringify( total_data ), "utf8", ()=>{} );
@@ -190,46 +192,68 @@ async function captcha_solver(){
 }
 
 async function search_page_for_new_tickets( link ){
-  let page = await browser.newPage();
-  await page.setUserAgent(
-     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-   );
-  await page.goto(link, {timeout: 60000 * 60, waitUntil: ["networkidle0", "domcontentloaded"]});
-  await page.setViewport({width: 1080, height: 1024});
-  //tickets_data
-  let ticket_ids = await page.evaluate(() => {
-    dt = Array.prototype.map.call(document.querySelectorAll("#main > section > div > div > div.overflow-hidden > div > div > ul > li"), (x)=>x.getAttribute("id"));
-    return dt;
-  });
-  let notify = false;
-  if(tickets_data[link] == null){
-    notify = true;
-    tickets_data[link] = ticket_ids;
-  }else{
-    ticket_ids.forEach((id)=>{
-        let exists = false;
-        tickets_data[link].forEach((_id)=>{
-          if(_id == id) exists = true;
-        })
-        if(exists == false){
-          tickets_data[link].push(id);
-          notify = true;
-        }
-    })
-  }
-
-  if(notify){
-     for (const chatId in chat_ids) {
-              bot.sendMessage(chatId, `تم اضافة تذاكر جديدة على الرابط الاتي: ${link}`)
-              .then(() => {
-                  // console.log('Message sent successfully');
-              })
-              .catch((error) => {
-                // setTimeout(()=>{ bot.sendMessage(chatId, `${dt.title}\n${dt.link}\n${dt.starting_price}\n ${dt.date}`)}, 5000)
-              });
+  if(currently_open_pages[link] == null){
+    currently_open_pages[link] = true;
+    let page = await browser.newPage();
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+    );
+    await page.goto(link, {timeout: 60000 * 60, waitUntil: ["networkidle0", "domcontentloaded"]});
+    await page.setViewport({width: 1080, height: 1024});
+    await page.evaluate(async () => {
+            async function get_buttons(){
+                return new Promise((resolve) => loop(resolve));
+              function loop(resolve){
+                    let element = document.querySelector("#main > section > div.col-span-full.h-min.space-y-2 > div.bg-body-light.-mx-4.px-4.pb-2 > div.overflow-hidden > div > div > div > button");
+                if(element == null){
+                    return resolve("resolved")
+                }else{
+                    element.click()
+                    setTimeout(()=>loop(resolve),1000)
+                }
+              }
             }
+            return await get_buttons();
+        
+      });
+    //tickets_data
+    let ticket_ids = await page.evaluate(() => {
+      dt = Array.prototype.map.call(document.querySelectorAll("#main > section > div > div > div.overflow-hidden > div > div > ul > li"), (x)=>x.getAttribute("id"));
+      return dt;
+    });
+    let notify = false;
+    if(tickets_data[link] == null){
+      notify = true;
+      tickets_data[link] = ticket_ids;
+    }else{
+      ticket_ids.forEach((id)=>{
+          let exists = false;
+          tickets_data[link].forEach((_id)=>{
+            if(_id == id) exists = true;
+          })
+          if(exists == false){
+            tickets_data[link].push(id);
+            notify = true;
+          }
+      })
+    }
+
+    if(notify){
+      for (const chatId in chat_ids) {
+                bot.sendMessage(chatId, `تم اضافة تذاكر جديدة على الرابط الاتي: ${link}`)
+                .then(() => {
+                    // console.log('Message sent successfully');
+                })
+                .catch((error) => {
+                  // setTimeout(()=>{ bot.sendMessage(chatId, `${dt.title}\n${dt.link}\n${dt.starting_price}\n ${dt.date}`)}, 5000)
+                });
+              }
+    }
+    page.close();
+
+    await delay(7000);
+    delete currently_open_pages[link];
   }
-  
 
 }
 
